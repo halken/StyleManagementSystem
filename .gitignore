@@ -7,3 +7,4 @@ test_css
 #files
 *.tgz
 *.log
+.DS_Store
