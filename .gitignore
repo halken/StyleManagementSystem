@@ -1,0 +1,10 @@
+#directories
+bower_components
+node_modules
+dist
+test_css
+
+#files
+*.tgz
+*.log
+.DS_Store
