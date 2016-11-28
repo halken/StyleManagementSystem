@@ -154,6 +154,7 @@ ipcMain.on("create-default", (sender) => {
 			console.log(err);
 		} else {
 			// DB接続成功
+			console.log("connect create-defalut");
 			async.waterfall([
 				function(callback) {
 					const str1 = "CREATE TABLE template (id serial PRIMARY KEY, name varchar UNIQUE)";
@@ -1235,21 +1236,6 @@ ipcMain.on("open-css-file", (sender) => {
 			sender.returnValue = '';
 		}
 	});
-
-	// function readFile(path) {
-	// 	var currentPath = path;
-	// 	fs.readFile(path, function(error, text) {
-	// 		if (error) {
-	// 			alert("CSS import Error: " + error);
-	// 			return;
-	// 		} else {
-	// 			// console.log(text.toString());
-	// 			var css = Parser.cssParser(text.toString());
-	// 			console.log(css);
-	// 		}
-	// 	});
-	// }
-
 });
 
 ipcMain.on("css-parse", (sender, filename) => {
@@ -1263,6 +1249,161 @@ ipcMain.on("css-parse", (sender, filename) => {
 			var css = Parser.cssParser(text.toString());
 			console.log(css);
 			sender.returnValue = css;
+		}
+	});
+});
+
+ipcMain.on("save-sql-file", (sender) => {
+	var options = {
+		title: "Save SQL File",
+		defaultPath: app.getPath('documents'),
+		filters: [
+			{name: 'sql', extensions: ['sql']}
+		]
+	};
+
+	dialog.showSaveDialog(options, function(filename) {
+		if (filename) {
+			sender.returnValue = filename;
+		} else {
+			sender.returnValue = '';
+		}
+	});
+});
+
+ipcMain.on('export-sql-file', (sender, filename) => {
+	var pool = new pg.Pool(config);
+	pool.connect(function (err, client, done) {
+		if (err) {
+			// DB接続失敗
+			console.log(err);
+		} else {
+			// DB接続成功
+			var data = '';
+			async.waterfall([
+				function(callback) {
+					// drop table, create table
+					var tmp = '';
+					tmp = tmp + 'DROP TABLE com_dec;\n';
+					tmp = tmp + 'DROP TABLE tem_com;\n';
+					tmp = tmp + 'DROP TABLE declaration;\n';
+					tmp = tmp + 'DROP TABLE component;\n';
+					tmp = tmp + 'DROP TABLE template;\n\n';
+
+					tmp = tmp + 'CREATE TABLE template (id serial PRIMARY KEY, name varchar);\n';
+					tmp = tmp + 'CREATE TABLE component (id serial PRIMARY KEY, name varchar);\n';
+					tmp = tmp + 'CREATE TABLE declaration (id serial PRIMARY KEY property varchar, value varchar, UNIQUE (property, value));\n';
+					tmp = tmp + 'CREATE TABLE com_dec (com_id int REFERENCES component (id), dec_id int REFERENCES declaration (id));\n';
+					tmp = tmp + 'CREATE TABLE tem_com (tem_id int REFERENCES template (id), com_id int REFERENCES component (id));\n\n';
+
+					callback(null, tmp);
+				},
+				function(tmp, callback) {
+					// declaration table insert
+					var str1 = "SELECT * FROM declaration";
+					console.log("[str1]query -> " + str1);
+					client.query(str1, (err, result) => {
+						done();
+						if (err) {
+							console.log("declaration Error!");
+						} else {
+							var id = 0;
+							for (var i = 0; i < result.rows.length; i++) {
+								tmp = tmp + "INSERT INTO declaration VALUES (" + result.rows[i].id + ", '" + result.rows[i].property + "', '" + result.rows[i].value + "');\n";
+								if (result.rows[i].id > id) {
+									id = result.rows[i].id;
+								}
+							}
+							tmp = tmp + "SELECT SETVAL ('declaration_id_seq', " + id + ");\n\n";
+						}
+						callback(null, tmp);
+					});
+				},
+				function(tmp, callback) {
+					// component table insert
+					var str2 = "SELECT * FROM component";
+					console.log("[str2]query -> " + str2);
+					client.query(str2, (err, result) => {
+						done();
+						if (err) {
+							console.log("component Error!");
+						} else {
+							var id = 0;
+							for (var i = 0; i < result.rows.length; i++) {
+								tmp = tmp + "INSERT INTO component VALUES (" + result.rows[i].id + ", '" + result.rows[i].name + "');\n";
+								if (result.rows[i].id > id) {
+									id = result.rows[i].id;
+								}
+							}
+							tmp = tmp + "SELECT SETVAL ('component_id_seq', " + id + ");\n\n";
+						}
+						callback(null, tmp);
+					});
+				},
+				function(tmp, callback) {
+					// template table insert
+					var str3 = "SELECT * FROM template";
+					console.log("[str3]query -> " + str3);
+					client.query(str3, (err, result) => {
+						done();
+						if (err) {
+							console.log("table Error!");
+						} else {
+							var id = 0;
+							for (var i = 0; i < result.rows.length; i++) {
+								tmp = tmp + "INSERT INTO template VALUES (" + result.rows[i].id + ", '" + result.rows[i].name + "');\n";
+								if (result.rows[i].id > id) {
+									id = result.rows[i].id;
+								}
+							}
+							tmp = tmp + "SELECT SETVAL ('template_id_seq', " + id + ");\n\n";
+						}
+						callback(null, tmp);
+					});
+				},
+				function(tmp, callback) {
+					// com_dec table insert
+					var str4 = "SELECT * FROM com_dec";
+					console.log("[str4]query -> " + str4);
+					client.query(str4, (err, result) => {
+						done();
+						if (err) {
+							console.log("com_dec Error!");
+						} else {
+							for (var i = 0; i < result.rows.length; i++) {
+								tmp = tmp + "INSERT INTO com_dec VALUES (" + result.rows[i].com_id + ", " + result.rows[i].dec_id + ");\n";
+							}
+						}
+						callback(null, tmp);
+					});
+				},
+				function(tmp, callback) {
+					// tem_com table insert
+					var str5 = "SELECT * FROM tem_com";
+					console.log("[str5]query -> " + str5);
+					client.query(str5, (err, result) => {
+						done();
+						if (err) {
+							console.log("tem_dec Error!");
+						} else {
+							for (var i = 0; i < result.rows.length; i++) {
+								tmp = tmp + "INSERT INTO tem_com VALUES (" + result.rows[i].tem_id + ", " + result.rows[i].com_id + ");\n";
+							}
+						}
+						callback(null, tmp);
+					});
+				}
+			], function(err, tmp) {
+				fs.writeFile(filename, tmp, function(error) {
+					if (error != null) {
+						console.log("Export SQL File Error! : " + error);
+						sender.returnValue = error;
+					} else {
+						console.log("Export SQL File Complete.");
+						sender.returnValue = null;
+					}
+				});
+			});
 		}
 	});
 });

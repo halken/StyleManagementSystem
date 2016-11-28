@@ -8,6 +8,15 @@ import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 
 // CSSインポート (第3階層 /Window/Main/)
 var Export = React.createClass({
+    exportSQLFile: function() {
+        var filename = ipcRenderer.sendSync("save-sql-file");
+        var e = ipcRenderer.sendSync("export-sql-file", filename);
+        if (e != null) {
+            alert("Export SQL File Error : " + e);
+        } else {
+            alert("Export SQL File Complete.");
+        }
+    },
 	render: function() {
     	return (
     		<div className="pane">
@@ -16,7 +25,7 @@ var Export = React.createClass({
     			</div>
     			<hr />
     			<Panel className="export-panel">
-    				Coming soon ...
+    				<Button onClick={this.exportSQLFile}>SQL file</Button>
       			</Panel>
       		</div>
     	);

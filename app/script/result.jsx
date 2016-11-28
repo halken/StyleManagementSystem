@@ -38,12 +38,12 @@ var Result = React.createClass({
 	handleChange: function(e) {
 		if (e.target.value.length != 0) {
 			this.setState({
-				value: e.target.value,
+				name: e.target.value,
 				userFlg: 'success'
 			});
 		} else {
 			this.setState({
-				value: e.target.value,
+				name: e.target.value,
 				userFlg: 'error'
 			});
 		}

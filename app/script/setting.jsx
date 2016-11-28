@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom';
 import storage from 'electron-json-storage';
 import pg from 'pg';
 import {ipcRenderer} from "electron";
-import {Panel, Button, ButtonGroup} from "react-bootstrap";
+import {Panel, Button, ButtonGroup, Modal} from "react-bootstrap";
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 
 // Option (第3階層 /Window/Main)
@@ -55,9 +55,10 @@ var Setting = React.createClass({
 		var dbState = ipcRenderer.sendSync("connect-database");
 		if (dbState) { // DB接続成功
 			ipcRenderer.send("set-json", this.state.host, this.state.user, this.state.db, this.state.password);
+			var tmp = ipcRenderer.sendSync("list-template");
 			this.props.onConnectDB;
 		} else { // DB接続失敗
-			alert("データベースの接続に失敗しました。")
+			alert("データベースの接続に失敗しました。");
 		}
 	},
 	changeWindowSize: function(value, event) {
