@@ -193,7 +193,7 @@ ipcMain.on("create-default", (sender) => {
 					});
 				},
 				function(callback) {
-					const str4 = "CREATE TABLE com_dec (com_id int REFERENCES component (id), dec_id int REFERENCES declaration (id))";
+					const str4 = "CREATE TABLE com_dec (com_id int REFERENCES component (id), dec_id int REFERENCES declaration (id), action varchar)";
 					client.query(str4, (err, result) => {
 						done();
 						if (err) {
@@ -266,15 +266,20 @@ ipcMain.on("list-template", (sender) => {
 	});
 });
 
-ipcMain.on("list-add-template", (sender) => {
-	var pool = new  pg.Pool(config);
+ipcMain.on("list-add-template", (sender, def) => {
+	var pool = new pg.Pool(config);
 	pool.connect(function (err, client, done) {
 		if (err) {
 			// DB接続失敗
 			console.log(err);
 		} else {
 			// DB接続成功
-			var str = "SELECT t.id, t.name FROM template t, component c, tem_com tc WHERE t.id=tc.tem_id AND c.id=tc.com_id GROUP BY t.id ORDER BY t.id";
+			var str = "SELECT t.id, t.name FROM template t, component c, tem_com tc WHERE t.id=tc.tem_id AND c.id=tc.com_id";
+			for (var i = 0; i < def.length; i++) {
+				str = str + " AND NOT c.name='" + def[i] + "'";
+			}
+			str = str + " GROUP BY t.id ORDER BY t.id";
+			console.log("[addlist] str -> " + str);
 			client.query(str, (err, result) => {
 				done();
 				if (err) {
@@ -295,36 +300,74 @@ ipcMain.on("list-add-template", (sender) => {
 	});
 });
 
-// ipcMain.on("list-add-component", (sender) => {
-// 	var pool = new  pg.Pool(config);
-// 	pool.connect(function (err, client, done) {
-// 		if (err) {
-// 			// DB接続失敗
-// 			console.log(err);
-// 		} else {
-// 			// DB接続成功
-// 			var str = "SELECT t.id as t_id, t.name as template, c.id as c_id, c.name as component FROM template t, component c, tem_com tc WHERE t.id=tc.tem_id AND c.id=tc.com_id ORDER BY t.id";
-// 			client.query(str, (err, result) => {
-// 				done();
-// 				if (err) {
-// 					console.log("add template, component list loading Error!");
-// 				} else {
-// 					console.log("connect add template, component list.");
-// 					var tmp = [];
-// 					for (var i = 0; i < result.rows.length; i++) {
-// 						tmp = tmp.concat({
-// 							t_id: result.rows[i].t_id,
-// 							temp: result.rows[i].template,
-// 							c_id: result.rows[i].c_id,
-// 							com: result.rows[i].component
-// 						});
-// 					}
-// 					sender.returnValue = tmp;
-// 				}
-// 			});
-// 		}
-// 	});
-// });
+ipcMain.on("list-add-template-default", (sender, def) => {
+	var pool = new pg.Pool(config);
+	pool.connect(function (err, client, done) {
+		if (err) {
+			// DB接続失敗
+			console.log(err);
+		} else {
+			// DB接続成功
+			var str = "SELECT t.id as t_id, t.name as t_name, c.id as c_id, c.name as c_name FROM template t, component c, tem_com tc WHERE t.id=tc.tem_id AND c.id=tc.com_id";
+			for (var i = 0; i < def.length; i++) {
+				if (i == 0) {
+					str = str + " AND (c.name='" + def[i] + "'";
+				} else {
+					str = str + " OR c.name='" + def[i] + "'";
+				}
+			}
+			str = str + ") GROUP BY c.name, t.id, t.name, c.id ORDER BY c.name, t.id";
+			console.log("[adddefault] str -> " + str);
+			client.query(str, (err, result) => {
+				done();
+				if (err) {
+					console.log("add template default list loading Error!");
+				} else {
+					console.log("connect add template default list.");
+					var tmp = [];
+					for (var i = 0; i < result.rows.length; i++) {
+						tmp = tmp.concat({
+							t_id: result.rows[i].t_id,
+							t_name: result.rows[i].t_name,
+							c_id: result.rows[i].c_id,
+							c_name: result.rows[i].c_name
+						});
+					}
+					sender.returnValue = tmp;
+				}
+			});
+		}
+	});
+});
+
+ipcMain.on("list-add-component", (sender, tem_id, def) => {
+	var pool = new  pg.Pool(config);
+	pool.connect(function (err, client, done) {
+		if (err) {
+			// DB接続失敗
+			console.log(err);
+		} else {
+			// DB接続成功
+			var str = "SELECT c.id, c.name FROM component c, template t, tem_com tc WHERE t.id=tc.tem_id AND c.id=tc.com_id AND t.id=" + tem_id;
+			for (var i = 0; i < def.length; i++) {
+				str = str + " AND NOT c.name='" + def[i] + "'";
+			}
+			client.query(str, (err, result) => {
+				done();
+				if (err) {
+					console.log("add template, component list loading Error!");
+				} else {
+					console.log("connect add template, component list.");
+					var tmp = [];
+					for (var i = 0; i < result.rows.length; i++) {
+						tmp = tmp.concat({id: result.rows[i].id, name: result.rows[i].name});
+					}
+					sender.returnValue = tmp;
+				}
+			});
+		}
+	});
+});
 
 ipcMain.on("list-component", (sender, tem_id) => {
 	var pool = new pg.Pool(config);
@@ -489,7 +532,7 @@ ipcMain.on("insert-declaration", (sender, com_id, property, value) => {
 					}
 				},
 			], function(err, dec_id) {
-				const str3 = "INSERT INTO com_dec VALUES (" + com_id + ", " + dec_id + ")";
+				const str3 = "INSERT INTO com_dec VALUES (" + com_id + ", " + dec_id + ", '')";
 				console.log("[str3]query -> " + str3);
 				client.query(str3, (err, result) => {
 					done();
@@ -1182,7 +1225,7 @@ ipcMain.on("update-declaration", (sender, com_id, id, property, value) => {
 					});
 				} else if ((check1 == null) && (!check2)) { // false, false
 					const str5 = "UPDATE declaration SET value='" + value + "' WHERE id=" + dec_id;
-					cnosole.log("[str5]query -> " + str5);
+					console.log("[str5]query -> " + str5);
 					client.query(str5, (err, result) => {
 						done();
 						if (err) {
@@ -1292,8 +1335,8 @@ ipcMain.on('export-sql-file', (sender, filename) => {
 
 					tmp = tmp + 'CREATE TABLE template (id serial PRIMARY KEY, name varchar);\n';
 					tmp = tmp + 'CREATE TABLE component (id serial PRIMARY KEY, name varchar);\n';
-					tmp = tmp + 'CREATE TABLE declaration (id serial PRIMARY KEY property varchar, value varchar, UNIQUE (property, value));\n';
-					tmp = tmp + 'CREATE TABLE com_dec (com_id int REFERENCES component (id), dec_id int REFERENCES declaration (id));\n';
+					tmp = tmp + 'CREATE TABLE declaration (id serial PRIMARY KEY, property varchar, value varchar, UNIQUE (property, value));\n';
+					tmp = tmp + 'CREATE TABLE com_dec (com_id int REFERENCES component (id), dec_id int REFERENCES declaration (id), action varchar);\n';
 					tmp = tmp + 'CREATE TABLE tem_com (tem_id int REFERENCES template (id), com_id int REFERENCES component (id));\n\n';
 
 					callback(null, tmp);
@@ -1371,7 +1414,7 @@ ipcMain.on('export-sql-file', (sender, filename) => {
 							console.log("com_dec Error!");
 						} else {
 							for (var i = 0; i < result.rows.length; i++) {
-								tmp = tmp + "INSERT INTO com_dec VALUES (" + result.rows[i].com_id + ", " + result.rows[i].dec_id + ");\n";
+								tmp = tmp + "INSERT INTO com_dec VALUES (" + result.rows[i].com_id + ", " + result.rows[i].dec_id + ", '');\n";
 							}
 						}
 						callback(null, tmp);
@@ -1426,6 +1469,26 @@ ipcMain.on("get-pw", (sender) => {
 
 ipcMain.on("get-window-size", (sender) => {
 	sender.returnValue = mainWindow.getSize();
+});
+
+ipcMain.on("get-default-component", (sender) => {
+	var item = [];
+
+	item.push("style-body");
+	item.push("style-row");
+	item.push("style-col");
+	item.push("style-table-row");
+	item.push("style-table-col");
+	item.push("style-list-row");
+	item.push("style-list-col");
+	item.push("style-att");
+	item.push("style-table-att");
+	item.push("style-list-att");
+	item.push("style-img");
+	item.push("style-line");
+	item.push("style-anchor");
+
+	sender.returnValue = item;
 });
 
 ipcMain.on("select-menu-log", (sender, e) => {

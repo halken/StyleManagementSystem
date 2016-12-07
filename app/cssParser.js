@@ -34,6 +34,7 @@ exports.cssParser = function(css) {
 			selector = att[2].split('\r\n').join('\n').trim();
 		}
 
+
 		// @mediaと通常の宣言の区別
 		if (selector.indexOf('@media') !== -1) {
 			// @media分離処理
@@ -41,26 +42,20 @@ exports.cssParser = function(css) {
 		} else {
 			// 通常の宣言
 			var declaration = parseDeclarations(att[6]);
-			// var property = '';
-			// var value = '';
-			// for (var i = 0; i < declaration.length; i++) {
-			// 	property = declaration[i].property;
-			// 	value = declaration[i].value;
-			// 	var style = {
-			// 		selector: selector,
-			// 		property: property,
-			// 		value: value
-			// 	}
-			// 	var style = {
-
-			// 	};
-			// 	output.push(style);
-			// }
-			var style = {
-				selector: selector,
-				declaration: declaration
-			};
-			output.push(style);
+			var selectors = selector.split(",");
+			for (var i = 0; i < selectors.length; i++) {
+				selectors[i] = selectors[i].trim();
+				var style = {
+					selector: selectors[i],
+					declaration: declaration
+				};
+				output.push(style);
+			}
+			// var style = {
+			// 	selector: selector,
+			// 	declaration: declaration
+			// };
+			// output.push(style);
 		}
 	}
 	return output;

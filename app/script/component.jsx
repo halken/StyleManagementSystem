@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom';
 import storage from 'electron-json-storage';
 import pg from 'pg';
 import {ipcRenderer} from "electron";
-import {Modal, Panel, Button, SplitButton, MenuItem, FormGroup, ControlLabel, FormControl} from "react-bootstrap";
+import {Modal, Panel, Button, SplitButton, MenuItem, FormGroup, ControlLabel, FormControl, Tabs, Tab} from "react-bootstrap";
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 
 // 外部JSX
@@ -22,13 +22,16 @@ var Component = React.createClass({
 			show: false,
 			userFlg: 'success',
 			check: false,
-			chk_id: ''
+			chk_id: '',
+			default_comp: []
 		};
 	},
 	componentWillMount: function() {
 		var tmp = ipcRenderer.sendSync("list-component", this.props.selected);
+		var def = ipcRenderer.sendSync("get-default-component");
 		this.setState({
-			comp: tmp.map(function(x) {return x})
+			comp: tmp.map(function(x) {return x}),
+			default_comp: def.map(function(x) {return x})
 		});
 	},
 	backComponentHandlar: function() {
@@ -76,6 +79,11 @@ var Component = React.createClass({
 				<MenuItem divider />
 				<MenuItem onClick={this.deleteCheck.bind(this, id)} eventKey="3">Delete</MenuItem>
 			</SplitButton>
+		);
+	},
+	getDefaultButton: function(id, name) {
+		return (
+			<Button className="com-def" onClick={this.onRowSelect.bind(this, id, name)} key={"def"+id}>{name}</Button>
 		);
 	},
 	open: function(id, name, event) {
@@ -144,9 +152,20 @@ var Component = React.createClass({
 		// 	onSelect: this.onRowSelect
 		// };
 		var item = [];
+		var default_item = [];
 		for (var i in this.state.comp) {
-			// item.push(<Panel className="com-item" onClick={this.onRowSelect.bind(this, this.state.comp[i].id, this.state.comp[i].name)} key={this.state.comp[i].id}>{this.state.comp[i].name}</Panel>);
-			item.push(this.getDropdownButton(this.state.comp[i].id, this.state.comp[i].name));
+			var flag = false;
+			for (var j = 0; j < this.state.default_comp.length; j++) {
+				if (this.state.default_comp[j] === this.state.comp[i].name) {
+					flag = true;
+					break;
+				}
+			}
+			if (flag) {
+				default_item.push(this.getDefaultButton(this.state.comp[i].id, this.state.comp[i].name));
+			} else {
+				item.push(this.getDropdownButton(this.state.comp[i].id, this.state.comp[i].name));
+			}
 		}
 		if (this.state.id === '') {
 			return (
@@ -157,7 +176,18 @@ var Component = React.createClass({
 						</div>
 						<hr />
 						<div className="com-list">
-							{item}
+							<Tabs id="component-tab" defaultActiveKey={1} bsStyle="pills">
+								<Tab eventKey={1} title="original">
+									<div className="com-original">
+										{item}
+									</div>
+								</Tab>
+								<Tab eventKey={2} title="default">
+									<div className="com-original">
+										{default_item}
+									</div>
+								</Tab>
+							</Tabs>
 						</div>
 					</div>
 					<footer className="toolbar toolbar-footer custom">

@@ -12,6 +12,7 @@ var AddTemplate = React.createClass({
 	getInitialState: function() {
 		return {
 			temp: [],
+			def: [],
 			add: [],
 			value: '',
 			userFlg: 'error',
@@ -19,9 +20,12 @@ var AddTemplate = React.createClass({
 		};
 	},
 	componentWillMount: function() {
-		var tmp = ipcRenderer.sendSync("list-add-template");
+		var def = ipcRenderer.sendSync("get-default-component");
+		var tmp = ipcRenderer.sendSync("list-add-template", def);
+		var tmp2 = ipcRenderer.sendSync("list-add-template-default", def);
 		this.setState({
-			temp: tmp.map(function(x) {return x})
+			temp: tmp.map(function(x) {return x}),
+			def: tmp2.map(function(x) {return x})
 		});
 	},
 	handleChange: function(e) {
@@ -44,18 +48,22 @@ var AddTemplate = React.createClass({
 			});
 		}
 	},
-	addOrDeleteComponent: function(id, event) {
+	addOrDeleteComponent: function(id, name, event) {
 		var tmp = [];
 		var flag = true;
 		for (var i in this.state.add) {
-			if (id === this.state.add[i].id) {
+			if (id === this.state.add[i].id) { // 同じidなら削除対象
 				flag = false;
 			} else {
-				tmp.push({id: this.state.add[i].id});
+				if (name === this.state.add[i].name) {
+					// do nothing
+				} else {
+					tmp.push({id: this.state.add[i].id, name: this.state.add[i].name});
+				}
 			}
 		}
 		if (flag) {
-			tmp.push({id: id});
+			tmp.push({id: id, name: name});
 		}
 		this.setState({
 			add: tmp.map(function(x) {return x}),
@@ -71,28 +79,59 @@ var AddTemplate = React.createClass({
 			return null;
 		} else { // templateの追加
 			var tmp_id = ipcRenderer.sendSync("insert-template", this.state.value);
+			var def = ipcRenderer.sendSync("get-default-component");
 			for (var i in this.state.add) {
 				ipcRenderer.send("insert-tem_com", tmp_id, this.state.add[i].id);
+			}
+			for (var i in def) {
+				var flag = true;
+				for (var j in this.state.add) {
+					if (def[i] === this.state.add[j].name) {
+						flag = false;
+						break;
+					}
+				}
+				if (flag) {
+					ipcRenderer.send("insert-component", tmp_id, def[i]);
+				}
 			}
 			this.props.clickBackButton();
 		}
 	},
 	render: function() {
 		var item = [];
+		// default component
+		var def_com = [];
+		for (var i in this.state.def) {
+			var flag = true;
+			for (var j in this.state.add) {
+				if (this.state.add[j].id === this.state.def[i].c_id) {
+					def_com.push(<ListGroupItem bsStyle="success" key={this.state.def[i].t_id + "_" + this.state.def[i].c_id} onClick={this.addOrDeleteComponent.bind(this, this.state.def[i].c_id, this.state.def[i].c_name)}>{this.state.def[i].t_name + " - " + this.state.def[i].c_name}</ListGroupItem>);
+					flag = false;
+					break;
+				}
+			}
+			if (flag) {
+				def_com.push(<ListGroupItem key={this.state.def[i].t_id + "_" + this.state.def[i].c_id} onClick={this.addOrDeleteComponent.bind(this, this.state.def[i].c_id, this.state.def[i].c_name)}>{this.state.def[i].t_name + " - " + this.state.def[i].c_name}</ListGroupItem>);
+			}
+		}
+		item.push(<Panel className="add-tmp-group" collapsible key={"panel_default"} header={"default-component"}><ListGroup fill key={"list-default"}>{def_com}</ListGroup></Panel>);
+		// defalut以外のcomponent
 		for (var i in this.state.temp) {
 			var item2 = [];
-			var list = ipcRenderer.sendSync("list-component", this.state.temp[i].id);
+			var def = ipcRenderer.sendSync("get-default-component");
+			var list = ipcRenderer.sendSync("list-add-component", this.state.temp[i].id, def);
 			for (var j in list) {
 				var flag = true;
 				for (var k in this.state.add) {
 					if (this.state.add[k].id === list[j].id) {
-						item2.push(<ListGroupItem bsStyle="success" key={this.state.temp[i].id + "_" + list[j].id} onClick={this.addOrDeleteComponent.bind(this, list[j].id)}>{list[j].name}</ListGroupItem>);
+						item2.push(<ListGroupItem bsStyle="success" key={this.state.temp[i].id + "_" + list[j].id} onClick={this.addOrDeleteComponent.bind(this, list[j].id, list[j].name)}>{list[j].name}</ListGroupItem>);
 						flag = false;
 						break;
 					}
 				}
 				if (flag) {
-					item2.push(<ListGroupItem key={this.state.temp[i].id + "_" + list[j].id} onClick={this.addOrDeleteComponent.bind(this, list[j].id)}>{list[j].name}</ListGroupItem>);
+					item2.push(<ListGroupItem key={this.state.temp[i].id + "_" + list[j].id} onClick={this.addOrDeleteComponent.bind(this, list[j].id, list[j].name)}>{list[j].name}</ListGroupItem>);
 				}
 			}
 			item.push(<Panel className="add-tmp-group" collapsible key={"panel_" + this.state.temp[i].id} header={this.state.temp[i].name}><ListGroup fill key={"list_" + this.state.temp[i].id}>{item2}</ListGroup></Panel>);

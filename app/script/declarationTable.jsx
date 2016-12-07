@@ -35,7 +35,7 @@ var DeclarationTable = React.createClass({
 		function deleteDeclarationFunc(id) {
 			this.props.deleteDeclaration(id);
 		}
-		console.log(row.state);
+		// console.log(row.state);
 		if (row.state == "deleted") {
 			return <Button bsSize="xsmall" onClick={this.cancellDeleteFunc.bind(this, row.id)}><span className="icon icon-back"></span></Button>;
 		} else {

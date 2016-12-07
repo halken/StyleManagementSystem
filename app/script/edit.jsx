@@ -22,9 +22,10 @@ var Edit = React.createClass({
 	},
 	componentWillMount: function() {
 		var tmp = ipcRenderer.sendSync("list-declaration", this.props.temp, this.props.comp);
+		var tmp2 = ipcRenderer.sendSync("list-declaration", this.props.temp, this.props.comp);
 		this.setState({
 			declaration: tmp.map(function(x) {return x}),
-			change_declaration: tmp.map(function(x) {return x})
+			change_declaration: tmp2.map(function(x) {return x})
 		});
 	},
 	deleteDeclarationHandlar: function(id) {
