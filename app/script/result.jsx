@@ -82,6 +82,7 @@ var Result = React.createClass({
 			// TODO
 
 			// 2. componentにインサート
+			// デフォルトコンポーネントの宣言がなければいれる // TODO
 			console.log(this.state.selected[i].component.selector.slice(1));
 			var com_id = ipcRenderer.sendSync("insert-component", tem_id, this.state.selected[i].component.selector.slice(1));
 			console.log("[count " + i + "] -> " + this.state.selected[i].component.declaration);

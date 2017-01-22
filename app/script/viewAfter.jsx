@@ -8,8 +8,19 @@ import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 
 // ビュー(後)要素 (第7階層 /Window/Main/Home/Template/Component/Edit)
 var ViewAfter = React.createClass({
+	getInitialState: function() {
+		return {
+			hover: false
+		};
+	},
+	toggleHover: function() {
+		this.setState({
+			hover: !this.state.hover
+		});
+	},
 	render: function() {
 		var style = {};
+		var hover = {};
 		var css = this.props.cssValues;
 		for (var i = 0; i < css.length; i++) {
 			// console.log("property[" + i + "] => " + css[i].property);
@@ -17,11 +28,22 @@ var ViewAfter = React.createClass({
 			if (css[i].state === "deleted") {
 				// not style
 			} else {
-				style[css[i].property] = css[i].value;
+				if (css[i].action === "hover") {
+					hover[css[i].property] = css[i].value;
+					style[css[i].property] = css[i].value;
+				} else {
+					style[css[i].property] = css[i].value;
+				}
 			}
 		}
+		var linkstyle;
+		if (this.state.hover) {
+			linkstyle = hover;
+		} else {
+			linkstyle = style;
+		}
 		return (
-			<div style={style}>
+			<div style={linkstyle}>
 				Sample Texts
 			</div>
 		);

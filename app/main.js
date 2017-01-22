@@ -404,7 +404,8 @@ ipcMain.on("list-declaration", (sender, tem_id, com_id) => {
 			console.log(err);
 		} else {
 			// DB接続成功
-			const str = "SELECT d.id, d.property, d.value FROM declaration d, component c, template t, tem_com tc, com_dec cd "
+			// const str = "SELECT d.id, d.property, d.value FROM declaration d, component c, template t, tem_com tc, com_dec cd "
+			const str = "SELECT d.id, d.property, d.value, cd.action FROM declaration d, component c, template t, tem_com tc, com_dec cd "
 						+ "WHERE t.id=tc.tem_id AND c.id=tc.com_id AND c.id=cd.com_id AND d.id=cd.dec_id AND t.id="
 						+ tem_id + " AND c.id=" + com_id;
 			console.log("query -> " + str);
@@ -416,7 +417,7 @@ ipcMain.on("list-declaration", (sender, tem_id, com_id) => {
 					console.log("connect declaration table.");
 					var tmp = [];
 					for (var i = 0; i < result.rows.length; i++) {
-						tmp = tmp.concat({id: result.rows[i].id, property: result.rows[i].property, value: result.rows[i].value, state: ''});
+						tmp = tmp.concat({id: result.rows[i].id, property: result.rows[i].property, value: result.rows[i].value, action: result.rows[i].action, state: ''});
 					}
 					sender.returnValue = tmp;
 				}
@@ -488,7 +489,7 @@ ipcMain.on("insert-component", (sender, tem_id, name) => {
 	});
 });
 
-ipcMain.on("insert-declaration", (sender, com_id, property, value) => {
+ipcMain.on("insert-declaration", (sender, com_id, property, value, action) => {
 	var pool = new pg.Pool(config);
 	pool.connect(function (err, client, done) {
 		if (err) {
@@ -532,7 +533,7 @@ ipcMain.on("insert-declaration", (sender, com_id, property, value) => {
 					}
 				},
 			], function(err, dec_id) {
-				const str3 = "INSERT INTO com_dec VALUES (" + com_id + ", " + dec_id + ", '')";
+				const str3 = "INSERT INTO com_dec VALUES (" + com_id + ", " + dec_id + ", '" + action + "')";
 				console.log("[str3]query -> " + str3);
 				client.query(str3, (err, result) => {
 					done();
@@ -1290,7 +1291,7 @@ ipcMain.on("css-parse", (sender, filename) => {
 		} else {
 			// console.log(text.toString());
 			var css = Parser.cssParser(text.toString());
-			console.log(css);
+			// console.log(css);
 			sender.returnValue = css;
 		}
 	});

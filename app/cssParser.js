@@ -34,7 +34,6 @@ exports.cssParser = function(css) {
 			selector = att[2].split('\r\n').join('\n').trim();
 		}
 
-
 		// @mediaと通常の宣言の区別
 		if (selector.indexOf('@media') !== -1) {
 			// @media分離処理
@@ -45,17 +44,47 @@ exports.cssParser = function(css) {
 			var selectors = selector.split(",");
 			for (var i = 0; i < selectors.length; i++) {
 				selectors[i] = selectors[i].trim();
-				var style = {
-					selector: selectors[i],
-					declaration: declaration
-				};
-				output.push(style);
+				selectors[i] = changeComponentName(selectors[i]);
+				// セレクタがかぶっているか比較
+				var flag = true;
+				for (var j = 0; j < output.length; j++) {
+					if (output[j].selector == selectors[i]) {
+						console.log("[selector duplication] -> " + selectors[i]);
+						// かぶっていたらかぶっている宣言を比較
+						for (var k = 0; k < declaration.length; k++) {
+							console.log("[new["+ k + "]] => " + declaration[k].property);
+							var flag2 = true;
+							for (var l = 0; l < output[j].declaration.length; l++) {
+								console.log("[declaration[" + l + "]] -> " + output[j].declaration[l].property);
+								if (declaration[k].property == output[j].declaration[l].property) {
+									output[j].declaration[l].value = declaration[k].value;
+									flag2 = false;
+									break;
+								}
+							}
+							if (flag2) {
+								output[j].declaration.push(declaration[k]);
+							}
+						}
+						flag = false;
+						break;
+					}
+				}
+				if (flag) {
+					var list = [];
+					for (var j = 0; j < declaration.length; j++) {
+						list.push({
+							property: declaration[j].property,
+							value: declaration[j].value
+						});
+					}
+					var style = {
+						selector: selectors[i],
+						declaration: list
+					};
+					output.push(style);
+				}
 			}
-			// var style = {
-			// 	selector: selector,
-			// 	declaration: declaration
-			// };
-			// output.push(style);
 		}
 	}
 	return output;
@@ -83,6 +112,11 @@ function parseDeclarations(declaration) {
 		var property = line[0].trim();
 		var value = line.slice(1).join(':').trim();
 
+		// !importantの削除
+		if (value.indexOf('!important') !== -1) {
+			value = value.replace('!important', '').trim();
+		}
+
 		if (property.length < 1 || value.length < 1) {
 			continue;
 		}
@@ -92,6 +126,45 @@ function parseDeclarations(declaration) {
 			value: value
 		});
 	}
-
 	return list;
+}
+
+// コンポーネント名の変更
+function changeComponentName(selector) {
+	var newName = '';
+	switch (selector) {
+		case 'body':
+			newName = 'style-body';
+			break;
+		case 'img':
+			newName = 'style-img';
+			break;
+		case 'hr':
+			newName = 'style-line';
+			break;
+		default:
+			newName = selector;
+			break;
+	}
+	// 先頭の'.'を削除
+	if (newName.match(/^\..*/)) {
+		newName = newName.slice(1);
+	}
+	// ' .'をローアーキャメルケースに
+	newName = newName.replace(/\s{2}\./, ' .');
+	while (newName.indexOf(' .') != -1) {
+		var num = newName.indexOf(' .');
+		newName = newName.replace(' .', '');
+		newName = newName.substring(0, num) + toUpperFirstLetter(newName.substring(num));
+	}
+	// 間の空白を'-'でつなぐ
+	if (newName.indexOf(' ')) {
+		newName = newName.replace(' ', '_');
+	}
+	return newName;
+}
+
+// 最初の文字を'大文字'に変換する関数
+function toUpperFirstLetter(str) {
+	return str.charAt(0).toUpperCase() + str.substring(1).toLowerCase();
 }

@@ -21,10 +21,11 @@ var Export = React.createClass({
     	return (
     		<div className="pane">
     			<div className="export-title">
-    				<h1>CSS File export</h1>
+    				<h1>File export</h1>
     			</div>
     			<hr />
     			<Panel className="export-panel">
+                    <Button>CSS File</Button>
     				<Button onClick={this.exportSQLFile}>SQL file</Button>
       			</Panel>
       		</div>

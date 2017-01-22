@@ -13,18 +13,18 @@ const AddRow = require("./addRow");
 var DeclarationTable = React.createClass({
 	getInitialState: function() {
 	    return {
-	    	  height: 370
+	    	  height: 380
 	    };
 	},
 	componentWillMount: function() {
 		var size = ipcRenderer.sendSync("get-window-size");
 		if (size[0] == 1024) {
 			this.setState({
-				height: 270
+				height: 250
 			});
 		} else { // size == 1200
 			this.setState({
-				height: 370
+				height: 380
 			});
 		}
 	},
